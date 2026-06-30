@@ -3,7 +3,9 @@ from aws_cdk import (
     RemovalPolicy,
     aws_s3 as s3,
     aws_cloudfront as cloudfront,
-    aws_cloudfront_origins as origins
+    aws_cloudfront_origins as origins,
+    aws_lambda as _lambda,
+    aws_apigateway as apigateway  # Added for API Gateway support
 )
 from constructs import Construct
 
@@ -41,5 +43,24 @@ class ServerlessMediaAppStack(Stack):
             default_behavior=cloudfront.BehaviorOptions(
                 origin=origins.S3BucketOrigin.with_origin_access_control(self.frontend_bucket),
                 viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+            )
+        )
+
+        # 3. Provision the Serverless Backend Lambda Function
+        self.media_processor_lambda = _lambda.Function(
+            self, "MediaProcessorFunction",
+            runtime=_lambda.Runtime.PYTHON_3_11,
+            handler="process_media.handler",       # filename.function_name
+            code=_lambda.Code.from_asset("lambda") # Looks inside our 'lambda' folder
+        )
+
+        # 4. Create the API Gateway and connect it directly to our Lambda function
+        self.api = apigateway.LambdaRestApi(
+            self, "MediaAppApi",
+            handler=self.media_processor_lambda,
+            proxy=True,                            # Routes all incoming web paths directly to our Lambda
+            default_cors_preflight_options=apigateway.CorsOptions(
+                allow_origins=apigateway.Cors.ALL_ORIGINS,
+                allow_methods=apigateway.Cors.ALL_METHODS
             )
         )
