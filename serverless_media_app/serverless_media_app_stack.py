@@ -1,11 +1,11 @@
 from aws_cdk import (
     Stack,
     RemovalPolicy,
+    CfnOutput,                     # Added to print the URL to the logs
     aws_s3 as s3,
     aws_cloudfront as cloudfront,
     aws_cloudfront_origins as origins,
     aws_lambda as _lambda,
-    # Using the modern v2 modules for high-performance HTTP APIs
     aws_apigatewayv2 as apigwv2,
     aws_apigatewayv2_integrations as integrations
 )
@@ -80,4 +80,11 @@ class ServerlessMediaAppStack(Stack):
             path="/api/upload",
             methods=[apigwv2.HttpMethod.POST],
             integration=integrations.HttpLambdaIntegration("UploadIntegration", self.upload_lambda)
+        )
+
+        # 6. Explicitly output the HTTP API URL to our deployment logs
+        CfnOutput(
+            self, "MediaAppHttpApiUrl",
+            value=self.http_api.url,
+            description="The root URL of our high-performance HTTP API Gateway"
         )
