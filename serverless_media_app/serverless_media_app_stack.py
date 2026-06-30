@@ -1,7 +1,7 @@
 from aws_cdk import (
     Stack,
     RemovalPolicy,
-    CfnOutput,                     # Added to print the URL to the logs
+    CfnOutput,
     aws_s3 as s3,
     aws_cloudfront as cloudfront,
     aws_cloudfront_origins as origins,
@@ -48,22 +48,30 @@ class ServerlessMediaAppStack(Stack):
             )
         )
 
-        # 3. Provision the two separate Serverless Backend Lambda Functions
+        # 3. Provision the two separate Serverless Backend Lambda Functions (With Bucket Environment Variables)
         self.list_lambda = _lambda.Function(
             self, "ListMediaFunction",
             runtime=_lambda.Runtime.PYTHON_3_11,
             handler="list_media.handler",
-            code=_lambda.Code.from_asset("lambda")
+            code=_lambda.Code.from_asset("lambda"),
+            environment={
+                "JPG_BUCKET_NAME": self.jpg_bucket.bucket_name,
+                "PDF_BUCKET_NAME": self.pdf_bucket.bucket_name
+            }
         )
 
         self.upload_lambda = _lambda.Function(
             self, "GetUploadUrlFunction",
             runtime=_lambda.Runtime.PYTHON_3_11,
             handler="get_upload_url.handler",
-            code=_lambda.Code.from_asset("lambda")
+            code=_lambda.Code.from_asset("lambda"),
+            environment={
+                "JPG_BUCKET_NAME": self.jpg_bucket.bucket_name,
+                "PDF_BUCKET_NAME": self.pdf_bucket.bucket_name
+            }
         )
 
-        # 4. Create a high-performance, cost-effective HTTP API Gateway (No CORS configured here)
+        # 4. Create a high-performance, cost-effective HTTP API Gateway
         self.http_api = apigwv2.HttpApi(
             self, "MediaAppHttpApi",
             api_name="MediaAppHttpApi"
@@ -82,7 +90,16 @@ class ServerlessMediaAppStack(Stack):
             integration=integrations.HttpLambdaIntegration("UploadIntegration", self.upload_lambda)
         )
 
-        # 6. Explicitly output the HTTP API URL to our deployment logs
+        # 6. Secure IAM Permissions (Principle of Least Privilege)
+        # List lambda only needs to view/read what files exist
+        self.jpg_bucket.grant_read(self.list_lambda)
+        self.pdf_bucket.grant_read(self.list_lambda)
+
+        # Upload lambda needs to generate secure links to write/put new files into S3
+        self.jpg_bucket.grant_put(self.upload_lambda)
+        self.pdf_bucket.grant_put(self.upload_lambda)
+
+        # 7. Explicitly output the HTTP API URL to our deployment logs
         CfnOutput(
             self, "MediaAppHttpApiUrl",
             value=self.http_api.url,
