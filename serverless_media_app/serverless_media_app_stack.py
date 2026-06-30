@@ -91,17 +91,29 @@ class ServerlessMediaAppStack(Stack):
         )
 
         # 6. Secure IAM Permissions (Principle of Least Privilege)
-        # List lambda only needs to view/read what files exist
         self.jpg_bucket.grant_read(self.list_lambda)
         self.pdf_bucket.grant_read(self.list_lambda)
-
-        # Upload lambda needs to generate secure links to write/put new files into S3
         self.jpg_bucket.grant_put(self.upload_lambda)
         self.pdf_bucket.grant_put(self.upload_lambda)
 
-        # 7. Explicitly output the HTTP API URL to our deployment logs
+        # 7. Bridge the gap: Route all /api/* requests from CloudFront directly to the HTTP API Gateway origin
+        self.distribution.add_behavior(
+            path_pattern="/api/*",
+            origin=origins.HttpOrigin(f"{self.http_api.api_id}.execute-api.{self.region}.amazonaws.com"),
+            viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
+            cache_policy=cloudfront.CachePolicy.CACHING_DISABLED  # No CDN caching for dynamic backend endpoints
+        )
+
+        # 8. Explicitly output both endpoints to our deployment logs
         CfnOutput(
             self, "MediaAppHttpApiUrl",
             value=self.http_api.url,
             description="The root URL of our high-performance HTTP API Gateway"
+        )
+
+        CfnOutput(
+            self, "CloudFrontDomainName",
+            value=self.distribution.distribution_domain_name,
+            description="The default cloudfront.net URL for testing the unified app"
         )
