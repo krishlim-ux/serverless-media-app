@@ -48,7 +48,7 @@ class ServerlessMediaAppStack(Stack):
             )
         )
 
-        # 3. Provision the two separate Serverless Backend Lambda Functions (With Bucket Environment Variables)
+        # 3. Provision the two separate Serverless Backend Lambda Functions
         self.list_lambda = _lambda.Function(
             self, "ListMediaFunction",
             runtime=_lambda.Runtime.PYTHON_3_11,
@@ -96,13 +96,15 @@ class ServerlessMediaAppStack(Stack):
         self.jpg_bucket.grant_put(self.upload_lambda)
         self.pdf_bucket.grant_put(self.upload_lambda)
 
-        # 7. Bridge the gap: Route all /api/* requests from CloudFront directly to the HTTP API Gateway origin
+        # 7. Bridge the gap: Route all /api/* requests with complete query string and header forwarding
         self.distribution.add_behavior(
             path_pattern="/api/*",
             origin=origins.HttpOrigin(f"{self.http_api.api_id}.execute-api.{self.region}.amazonaws.com"),
             viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
             allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
-            cache_policy=cloudfront.CachePolicy.CACHING_DISABLED  # No CDN caching for dynamic backend endpoints
+            cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
+            # Added policy to securely forward parameter contexts like ?filename= to your backend
+            origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER
         )
 
         # 8. Explicitly output both endpoints to our deployment logs
