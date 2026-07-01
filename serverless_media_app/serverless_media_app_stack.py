@@ -7,7 +7,10 @@ from aws_cdk import (
     aws_cloudfront_origins as origins,
     aws_lambda as _lambda,
     aws_apigatewayv2 as apigwv2,
-    aws_apigatewayv2_integrations as integrations
+    aws_apigatewayv2_integrations as integrations,
+    aws_route53 as route53,
+    aws_route53_targets as targets,
+    aws_certificatemanager as acm
 )
 from constructs import Construct
 
@@ -16,7 +19,7 @@ class ServerlessMediaAppStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # 1. Provision the private storage buckets
+        # 1a. Provision the private storage buckets
         self.frontend_bucket = s3.Bucket(
             self, "StaticWebsiteBucket",
             removal_policy=RemovalPolicy.DESTROY,
@@ -38,10 +41,26 @@ class ServerlessMediaAppStack(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL
         )
 
-        # 2. Deploy CloudFront pointing to the frontend bucket with Origin Access Control (OAC)
+        # 1b. Reference the existing Route 53 Hosted Zone
+        self.hosted_zone = route53.HostedZone.from_hosted_zone_attributes(
+            self, "CustomHostedZone",
+            hosted_zone_id="Z071914222KED4Z77OKZE",
+            zone_name="krish.cc"
+        )
+
+        # 1c. Provision a secure, auto-renewing SSL certificate with automated DNS validation
+        self.certificate = acm.Certificate(
+            self, "AppCertificate",
+            domain_name="krish.cc",
+            validation=acm.CertificateValidation.from_dns(self.hosted_zone)
+        )
+
+        # 2. Deploy CloudFront pointing to S3 with OAC, Custom Domains, and SSL enabled
         self.distribution = cloudfront.Distribution(
             self, "MediaAppDistribution",
             default_root_object="index.html",
+            domain_names=["krish.cc"],
+            certificate=self.certificate,
             default_behavior=cloudfront.BehaviorOptions(
                 origin=origins.S3BucketOrigin.with_origin_access_control(self.frontend_bucket),
                 viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
@@ -60,6 +79,7 @@ class ServerlessMediaAppStack(Stack):
             }
         )
 
+        # 4. Provision the upload engine Lambda function
         self.upload_lambda = _lambda.Function(
             self, "GetUploadUrlFunction",
             runtime=_lambda.Runtime.PYTHON_3_11,
@@ -71,13 +91,13 @@ class ServerlessMediaAppStack(Stack):
             }
         )
 
-        # 4. Create a high-performance, cost-effective HTTP API Gateway
+        # 5. Create a high-performance, cost-effective HTTP API Gateway
         self.http_api = apigwv2.HttpApi(
             self, "MediaAppHttpApi",
             api_name="MediaAppHttpApi"
         )
 
-        # 5. Route specific paths to their respective dedicated Lambda functions
+        # 6. Route specific paths to their respective dedicated Lambda functions
         self.http_api.add_routes(
             path="/api/media",
             methods=[apigwv2.HttpMethod.GET],
@@ -90,32 +110,32 @@ class ServerlessMediaAppStack(Stack):
             integration=integrations.HttpLambdaIntegration("UploadIntegration", self.upload_lambda)
         )
 
-        # 6. Secure IAM Permissions (Principle of Least Privilege)
+        # 7. Secure IAM Permissions (Principle of Least Privilege)
         self.jpg_bucket.grant_read(self.list_lambda)
         self.pdf_bucket.grant_read(self.list_lambda)
         self.jpg_bucket.grant_put(self.upload_lambda)
         self.pdf_bucket.grant_put(self.upload_lambda)
 
-        # 7. Bridge the gap: Route all /api/* requests with complete query string and header forwarding
+        # 8. Bridge the gap: Route all /api/* requests with complete query string forwarding
         self.distribution.add_behavior(
             path_pattern="/api/*",
             origin=origins.HttpOrigin(f"{self.http_api.api_id}.execute-api.{self.region}.amazonaws.com"),
             viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
             allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
             cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
-            # Added policy to securely forward parameter contexts like ?filename= to your backend
             origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER
         )
 
-        # 8. Explicitly output both endpoints to our deployment logs
-        CfnOutput(
-            self, "MediaAppHttpApiUrl",
-            value=self.http_api.url,
-            description="The root URL of our high-performance HTTP API Gateway"
+        # 9. Point the custom domain apex (krish.cc) directly to the CloudFront distribution
+        route53.ARecord(
+            self, "CloudFrontAliasRecord",
+            zone=self.hosted_zone,
+            target=route53.RecordTarget.from_alias(targets.CloudFrontTarget(self.distribution))
         )
 
+        # 10. Explicitly output our production entry point
         CfnOutput(
-            self, "CloudFrontDomainName",
-            value=self.distribution.distribution_domain_name,
-            description="The default cloudfront.net URL for testing the unified app"
+            self, "ProductionUrl",
+            value="https://krish.cc",
+            description="The live, secure production URL for the unified application"
         )
