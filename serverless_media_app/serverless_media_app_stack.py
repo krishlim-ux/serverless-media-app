@@ -20,7 +20,7 @@ class ServerlessMediaAppStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # 1a. Provision the private storage buckets
+        # 1a. Provision the private storage buckets with strict CORS hardening
         self.frontend_bucket = s3.Bucket(
             self, "StaticWebsiteBucket",
             removal_policy=RemovalPolicy.DESTROY,
@@ -32,14 +32,24 @@ class ServerlessMediaAppStack(Stack):
             self, "JpgMediaBucket",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            cors=[s3.CorsRule(
+                allowed_origins=["https://krish.cc"],
+                allowed_methods=[s3.HttpMethods.PUT],
+                allowed_headers=["*"]
+            )]
         )
 
         self.pdf_bucket = s3.Bucket(
             self, "PdfMediaBucket",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            cors=[s3.CorsRule(
+                allowed_origins=["https://krish.cc"],
+                allowed_methods=[s3.HttpMethods.PUT],
+                allowed_headers=["*"]
+            )]
         )
 
         # 1b. Reference the existing Route 53 Hosted Zone
