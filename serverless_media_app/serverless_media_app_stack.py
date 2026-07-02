@@ -10,7 +10,8 @@ from aws_cdk import (
     aws_apigatewayv2_integrations as integrations,
     aws_route53 as route53,
     aws_route53_targets as targets,
-    aws_certificatemanager as acm
+    aws_certificatemanager as acm,
+    aws_s3_deployment as s3deploy  
 )
 from constructs import Construct
 
@@ -48,7 +49,7 @@ class ServerlessMediaAppStack(Stack):
             zone_name="krish.cc"
         )
 
-        # 1c. Provision a secure, auto-renewing SSL certificate with automated DNS validation
+        # 1c. Provision a secure, auto-renewing SSL certificate
         self.certificate = acm.Certificate(
             self, "AppCertificate",
             domain_name="krish.cc",
@@ -67,7 +68,7 @@ class ServerlessMediaAppStack(Stack):
             )
         )
 
-        # 3. Provision the two separate Serverless Backend Lambda Functions
+        # 3. Provision the list-media Lambda function
         self.list_lambda = _lambda.Function(
             self, "ListMediaFunction",
             runtime=_lambda.Runtime.PYTHON_3_11,
@@ -91,7 +92,7 @@ class ServerlessMediaAppStack(Stack):
             }
         )
 
-        # 5. Create a high-performance, cost-effective HTTP API Gateway
+        # 5. Create a high-performance HTTP API Gateway
         self.http_api = apigwv2.HttpApi(
             self, "MediaAppHttpApi",
             api_name="MediaAppHttpApi"
@@ -126,14 +127,23 @@ class ServerlessMediaAppStack(Stack):
             origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER
         )
 
-        # 9. Point the custom domain apex (krish.cc) directly to the CloudFront distribution
+        # 9. Point the custom domain apex (krish.cc) directly to CloudFront
         route53.ARecord(
             self, "CloudFrontAliasRecord",
             zone=self.hosted_zone,
             target=route53.RecordTarget.from_alias(targets.CloudFrontTarget(self.distribution))
         )
 
-        # 10. Explicitly output our production entry point
+        # 10. Automate frontend builds, S3 synchronization, and CloudFront cache invalidation
+        s3deploy.BucketDeployment(
+            self, "DeployFrontendAssets",
+            sources=[s3deploy.Source.asset("frontend")],
+            destination_bucket=self.frontend_bucket,
+            distribution=self.distribution,
+            distribution_paths=["/*"]
+        )
+
+        # 11. Explicitly output our production entry point
         CfnOutput(
             self, "ProductionUrl",
             value="https://krish.cc",

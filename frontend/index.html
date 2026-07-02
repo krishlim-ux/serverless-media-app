@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serverless Media Hub</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --border: #334155;
+            --success: #10b981;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container { max-width: 800px; width: 100%; }
+        header { margin-bottom: 2rem; text-align: center; }
+        h1 { margin: 0 0 0.5rem 0; color: var(--text-main); }
+        p { margin: 0; color: var(--text-muted); }
+        .card { background-color: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; margin-bottom: 2rem; }
+        .upload-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+        .upload-zone:hover { border-color: var(--accent); }
+        input[type="file"] { display: none; }
+        .media-sections { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        .section-title { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem; color: var(--text-muted); }
+        .media-list { list-style: none; padding: 0; margin: 0; }
+        .media-item { background: var(--bg-primary); padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        #status { margin-top: 1rem; font-weight: 500; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Serverless Media Hub</h1>
+            <p>Hosted globally at krish.cc via CloudFront & S3</p>
+        </header>
+
+        <div class="card">
+            <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+                <p>Click to select a file for upload</p>
+                <p style="font-size: 0.85rem; margin-top: 0.5rem;">Supports JPG and PDF formats</p>
+                <input type="file" id="fileInput" accept=".jpg,.jpeg,.pdf" onchange="handleFileSelect(this)">
+            </div>
+            <div id="status"></div>
+        </div>
+
+        <div class="card">
+            <div class="media-sections">
+                <div>
+                    <div class="section-title">Images (.jpg)</div>
+                    <ul id="imagesList" class="media-list"></ul>
+                </div>
+                <div>
+                    <div class="section-title">Documents (.pdf)</div>
+                    <ul id="pdfsList" class="media-list"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchLibrary() {
+            try {
+                const response = await fetch('/api/media');
+                if (!response.ok) throw new Error('Failed to retrieve inventory');
+                const data = await response.json();
+                
+                const imagesList = document.getElementById('imagesList');
+                const pdfsList = document.getElementById('pdfsList');
+                
+                imagesList.innerHTML = data.images.length ? '' : '<li class="media-item">No images found</li>';
+                pdfsList.innerHTML = data.documents.length ? '' : '<li class="media-item">No documents found</li>';
+
+                data.images.forEach(img => {
+                    imagesList.innerHTML += `<li class="media-item"><span>${img}</span></li>`;
+                });
+                data.documents.forEach(doc => {
+                    pdfsList.innerHTML += `<li class="media-item"><span>${doc}</span></li>`;
+                });
+            } catch (err) {
+                console.error(err);
+                document.getElementById('status').innerText = 'Error loading library assets.';
+            }
+        }
+
+        async function handleFileSelect(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.color = 'var(--text-muted)';
+            statusDiv.innerText = `Preparing upload for ${file.name}...`;
+
+            try {
+                const urlResponse = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+                    method: 'POST'
+                });
+                if (!urlResponse.ok) throw new Error('Could not generate presigned upload context');
+                const urlData = await urlResponse.json();
+
+                statusDiv.innerText = 'Uploading payload directly to S3...';
+                const uploadResponse = await fetch(urlData.upload_url, {
+                    method: 'PUT',
+                    body: file,
+                    headers: { 'Content-Type': file.type }
+                });
+
+                if (!uploadResponse.ok) throw new Error('S3 payload rejection');
+
+                statusDiv.style.color = 'var(--success)';
+                statusDiv.innerText = 'Upload successful!';
+                input.value = '';
+                
+                setTimeout(() => {
+                    statusDiv.innerText = '';
+                    fetchLibrary();
+                }, 2000);
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.style.color = 'red';
+                statusDiv.innerText = `Upload failed: ${err.message}`;
+            }
+        }
+
+        fetchLibrary();
+    </script>
+</body>
+</html>
