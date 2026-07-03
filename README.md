@@ -48,3 +48,16 @@ File uploads are sent directly from the browser to the native S3 bucket endpoint
 
 ### CORS Scope: Apex Domain Only
 The S3 bucket CORS configuration permits requests exclusively from `https://krish.cc`. The `www` subdomain is deliberately excluded because the Route 53 zone and CloudFront distribution are configured for apex-only traffic. Restricting CORS to a single authoritative origin keeps the permitted attack surface minimal.
+
+---
+
+## Production Security Hardening
+
+### CloudFront Origin Access Control (OAC)
+All S3 buckets have public access blocked at both the bucket and account level. CloudFront Origin Access Control (OAC) is configured so that S3 bucket policies permit `s3:GetObject` exclusively when the request originates from the specific CloudFront distribution ARN. No direct S3 access is possible from the public internet.
+
+### IAM Least Privilege
+Lambda execution roles are scoped to the minimum permissions required for each function. The ListMedia function is granted read-only access to query object metadata from the media buckets. The UploadURL function has no read or list permissions — its execution role is granted `s3:PutObject` privileges strictly on the target storage buckets, which is the required permission embedded into the cryptographically generated presigned upload signature. Neither function has cross-bucket access.
+
+### S3 CORS Hardening
+CORS rules on the JPG and PDF media buckets restrict direct upload access to a single authorised origin. Permitted methods are limited to `PUT` only, allowed headers are restricted to `Content-Type`, and the allowed origin is locked to `https://krish.cc` exclusively. This prevents any unauthorised web application from writing directly to the storage layer.
