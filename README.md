@@ -22,3 +22,16 @@ Browser <──(Presigned URL)───── CloudFront <── HTTP API Gatewa
 
 Browser ──(PUT binary payload)──> S3 directly (CORS + signature verified)
 ```
+---
+
+## Core Tech Stack
+
+| Component | Technology | Rationale |
+| :--- | :--- | :--- |
+| **Frontend Hosting** | Amazon S3 + CloudFront | Static assets are served from a private S3 bucket via CloudFront edge locations globally, eliminating server overhead and reducing latency. |
+| **API Routing** | Amazon API Gateway (HTTP) | HTTP API was chosen over REST API for lower latency and reduced cost, sufficient for the two-route API surface this application requires. |
+| **Compute** | AWS Lambda (Python 3.11) | Serverless, event-driven functions handle media listing and presigned URL generation with no idle cost and automatic scaling. |
+| **Storage** | Amazon S3 | Separate private buckets isolate JPG and PDF assets by type, with public access blocked entirely and access enforced through OAC and presigned URLs. |
+| **Infrastructure as Code** | AWS CDK (Python) | The entire stack is defined and deployed in code, ensuring reproducibility and eliminating configuration drift from manual console changes. |
+| **DNS and SSL** | Route 53 + AWS Certificate Manager | Route 53 manages apex domain resolution and ACM provides an auto-renewing SSL certificate validated via DNS, attached to the CloudFront distribution. |
+| **CI/CD** | GitHub Actions | A push to main triggers automatic CDK deployment and frontend asset synchronisation in a single pipeline run. |
