@@ -93,3 +93,33 @@ Browser network console verification confirms expected responses across both rou
 
 ### 4. Direct S3 Upload
 The browser executes a `PUT` request directly to the native S3 endpoint using the presigned URL. S3 validates the signature and verifies the request origin against the bucket CORS policy, completing the upload with a `200 OK`. Uploaded objects are confirmed present in the target media buckets via the S3 console.
+
+---
+
+## Repository Structure
+
+```text
+serverless-media-app/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml                  # CI/CD automation workflow configuration
+├── frontend/
+│   └── index.html                      # Single-page application user interface
+├── lambda/
+│   ├── get_upload_url.py               # Generates secure presigned URLs for uploads
+│   └── list_media.py                   # Queries S3 storage bucket object list
+├── serverless_media_app/
+│   ├── __init__.py
+│   └── serverless_media_app_stack.py   # Core AWS CDK infrastructure stack definition
+├── tests/
+│   ├── unit/
+│   │   ├── __init__.py
+│   │   └── test_serverless_media_app_stack.py # Infrastructure assertions and unit tests
+│   └── __init__.py
+├── .gitignore                          # Specifies intentionally untracked files
+├── README.md                           # Technical documentation and architecture overview
+├── app.py                              # Entry point for the AWS CDK application
+├── cdk.json                            # Defines CDK execution context and feature flags
+├── requirements-dev.txt                # Testing and development dependencies
+├── requirements.txt                    # Primary production runtime dependencies
+└── source.bat                          # Local virtual environment activation script
