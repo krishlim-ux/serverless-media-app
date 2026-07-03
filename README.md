@@ -61,3 +61,15 @@ Lambda execution roles are scoped to the minimum permissions required for each f
 
 ### S3 CORS Hardening
 CORS rules on the JPG and PDF media buckets restrict direct upload access to a single authorised origin. Permitted methods are limited to `PUT` only, allowed headers are restricted to `Content-Type`, and the allowed origin is locked to `https://krish.cc` exclusively. This prevents any unauthorised web application from writing directly to the storage layer.
+
+---
+
+## Automated CI/CD Lifecycle
+
+Infrastructure provisioning and frontend deployment are managed entirely through a GitHub Actions pipeline. A push to the `main` branch triggers a workflow that sequentially deploys both infrastructure changes and static frontend assets in a single run.
+
+### Pipeline Steps
+
+* **Environment Setup:** The GitHub runner initialises a Linux environment with Python 3.11, installs project dependencies, and configures the AWS CDK CLI.
+* **Infrastructure Deployment:** The pipeline authenticates with AWS using credentials stored as GitHub Secrets and runs `cdk deploy`. This synthesises the Python CDK code into CloudFormation templates and applies any infrastructure changes deterministically, with no manual console intervention required.
+* **Frontend Asset Synchronisation:** The CDK `BucketDeployment` construct automatically syncs the contents of the `frontend/` directory to the static hosting S3 bucket as part of the same deployment run. Infrastructure changes and frontend updates are delivered atomically in a single pipeline execution.
