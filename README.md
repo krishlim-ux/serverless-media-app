@@ -73,3 +73,23 @@ Infrastructure provisioning and frontend deployment are managed entirely through
 * **Environment Setup:** The GitHub runner initialises a Linux environment with Python 3.11, installs project dependencies, and configures the AWS CDK CLI.
 * **Infrastructure Deployment:** The pipeline authenticates with AWS using credentials stored as GitHub Secrets and runs `cdk deploy`. This synthesises the Python CDK code into CloudFormation templates and applies any infrastructure changes deterministically, with no manual console intervention required.
 * **Frontend Asset Synchronisation:** The CDK `BucketDeployment` construct automatically syncs the contents of the `frontend/` directory to the static hosting S3 bucket as part of the same deployment run. Infrastructure changes and frontend updates are delivered atomically in a single pipeline execution.
+
+---
+
+## Technical Verification
+
+The application has been verified across all architectural layers to confirm routing, security, and compute integration are functioning as designed.
+
+### 1. CI/CD Pipeline
+The GitHub Actions workflow completes the full CDK synthesis and frontend asset deployment with no errors or warnings on every push to `main`.
+
+### 2. DNS and SSL
+The apex domain `https://krish.cc` resolves correctly over an encrypted HTTPS connection. The ACM certificate is attached to the CloudFront distribution and enforced at the edge.
+
+### 3. API Layer
+Browser network console verification confirms expected responses across both routes:
+* `GET /api/media` returns a well-formed JSON array of media objects with a `200 OK` status.
+* `POST /api/upload` returns a valid presigned S3 URL with a `200 OK` status.
+
+### 4. Direct S3 Upload
+The browser executes a `PUT` request directly to the native S3 endpoint using the presigned URL. S3 validates the signature and verifies the request origin against the bucket CORS policy, completing the upload with a `200 OK`. Uploaded objects are confirmed present in the target media buckets via the S3 console.
