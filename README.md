@@ -1,58 +1,15 @@
+# Serverless Media Hub
 
-# Welcome to your CDK Python project!
+A serverless media management application deployed on AWS via Infrastructure as Code. Users can browse and upload JPG and PDF assets through a secure web interface, with all storage, compute, and networking provisioned through AWS CDK and deployed automatically via a GitHub Actions CI/CD pipeline.
 
-This is a blank project for CDK development with Python.
+---
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+## System Architecture
 
-This project is set up like a standard Python project.  The initialization
-process also creates a virtualenv within this project, stored under the `.venv`
-directory.  To create the virtualenv it assumes that there is a `python3`
-(or `python` for Windows) executable in your path with access to the `venv`
-package. If for any reason the automatic creation of the virtualenv fails,
-you can create the virtualenv manually.
+Amazon Route 53 resolves krish.cc to the CloudFront distribution at the DNS layer. All application traffic flows directly through CloudFront, which routes requests to the appropriate origin based on path behaviour rules.
 
-To manually create a virtualenv on MacOS and Linux:
+### File Listing
 
-```
-$ python3 -m venv .venv
-```
-
-After the init process completes and the virtualenv is created, you can use the following
-step to activate your virtualenv.
-
-```
-$ source .venv/bin/activate
-```
-
-If you are a Windows platform, you would activate the virtualenv like this:
-
-```
-% .venv\Scripts\activate.bat
-```
-
-Once the virtualenv is activated, you can install the required dependencies.
-
-```
-$ pip install -r requirements.txt
-```
-
-At this point you can now synthesize the CloudFormation template for this code.
-
-```
-$ cdk synth
-```
-
-To add additional dependencies, for example other CDK libraries, just add
-them to your `requirements.txt` file and rerun the `python -m pip install -r requirements.txt`
-command.
-
-## Useful commands
-
- * `cdk ls`          list all stacks in the app
- * `cdk synth`       emits the synthesized CloudFormation template
- * `cdk deploy`      deploy this stack to your default AWS account/region
- * `cdk diff`        compare deployed stack with current state
- * `cdk docs`        open CDK documentation
-
-Enjoy!
+```text
+Browser ──(GET /api/media)──> CloudFront ──> HTTP API Gateway ──> ListMedia Lambda ──> S3
+Browser <──(JSON 200 OK)───── CloudFront <── HTTP API Gateway <── Lambda <────────────── S3
