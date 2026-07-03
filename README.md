@@ -13,8 +13,7 @@ Amazon Route 53 resolves krish.cc to the CloudFront distribution at the DNS laye
 ```text
 Browser ──(GET /api/media)──> CloudFront ──> HTTP API Gateway ──> ListMedia Lambda ──> S3
 Browser <──(JSON 200 OK)───── CloudFront <── HTTP API Gateway <── Lambda <────────────── S3
-
-
+```
 ### File Upload
 
 ```text
@@ -22,3 +21,4 @@ Browser ──(POST /api/upload)──> CloudFront ──> HTTP API Gateway ─�
 Browser <──(Presigned URL)───── CloudFront <── HTTP API Gateway <── Lambda
 
 Browser ──(PUT binary payload)──> S3 directly (CORS + signature verified)
+```
