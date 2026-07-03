@@ -35,3 +35,16 @@ Browser ──(PUT binary payload)──> S3 directly (CORS + signature verified
 | **Infrastructure as Code** | AWS CDK (Python) | The entire stack is defined and deployed in code, ensuring reproducibility and eliminating configuration drift from manual console changes. |
 | **DNS and SSL** | Route 53 + AWS Certificate Manager | Route 53 manages apex domain resolution and ACM provides an auto-renewing SSL certificate validated via DNS, attached to the CloudFront distribution. |
 | **CI/CD** | GitHub Actions | A push to main triggers automatic CDK deployment and frontend asset synchronisation in a single pipeline run. |
+
+---
+
+## Architectural Decisions and Trade-offs
+
+### API Gateway: HTTP API vs. REST API
+HTTP API Gateway was chosen over REST API for this project. The application requires only two routes — `/api/media` and `/api/upload` — with no need for the advanced features REST API provides, such as request validation, API keys, or AWS service integrations. HTTP API delivers lower latency and reduced cost for straightforward Lambda proxy routing.
+
+### Upload Path: Direct S3 vs. CloudFront Proxying
+File uploads are sent directly from the browser to the native S3 bucket endpoint, bypassing CloudFront and API Gateway entirely. Presigned URLs are cryptographically bound to a specific host — routing the upload through CloudFront would invalidate the signature. Direct upload also eliminates intermediate data transfer costs and avoids Lambda timeout constraints on large file transfers.
+
+### CORS Scope: Apex Domain Only
+The S3 bucket CORS configuration permits requests exclusively from `https://krish.cc`. The `www` subdomain is deliberately excluded because the Route 53 zone and CloudFront distribution are configured for apex-only traffic. Restricting CORS to a single authoritative origin keeps the permitted attack surface minimal.
