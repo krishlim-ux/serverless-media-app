@@ -83,16 +83,27 @@ The application has been verified across all architectural layers to confirm rou
 ### 1. CI/CD Pipeline
 The GitHub Actions workflow completes the full CDK synthesis and frontend asset deployment with no errors or warnings on every push to `main`.
 
+![CI/CD Pipeline Verification](evidence/pipeline_run.jpg)
+
 ### 2. DNS and SSL
 The apex domain `https://krish.cc` resolves correctly over an encrypted HTTPS connection. The ACM certificate is attached to the CloudFront distribution and enforced at the edge.
+
+![DNS and SSL Verification](evidence/dns_ssl.jpg)
 
 ### 3. API Layer
 Browser network console verification confirms expected responses across both routes:
 * `GET /api/media` returns a well-formed JSON array of media objects with a `200 OK` status.
+
+![API GET Request Verification](evidence/api_get.jpg)
+
 * `POST /api/upload` returns a valid presigned S3 URL with a `200 OK` status.
 
 ### 4. Direct S3 Upload
 The browser executes a `PUT` request directly to the native S3 endpoint using the presigned URL. S3 validates the signature and verifies the request origin against the bucket CORS policy, completing the upload with a `200 OK`. Uploaded objects are confirmed present in the target media buckets via the S3 console.
+
+![API PUT Request Verification](evidence/api_put.jpg)
+
+![S3 Console Storage Verification](evidence/s3_verification.jpg)
 
 ---
 
