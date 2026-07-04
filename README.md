@@ -118,6 +118,7 @@ serverless-media-app/
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml                  # CI/CD automation workflow configuration
+├── evidence/                           # Technical verification evidence screenshots
 ├── frontend/
 │   └── index.html                      # Single-page application user interface
 ├── lambda/
@@ -138,3 +139,4 @@ serverless-media-app/
 ├── requirements-dev.txt                # Testing and development dependencies
 ├── requirements.txt                    # Primary production runtime dependencies
 └── source.bat                          # Local virtual environment activation script
+
