@@ -90,6 +90,8 @@ The apex domain `https://krish.cc` resolves correctly over an encrypted HTTPS co
 
 ![DNS and SSL Verification](evidence/dns_ssl.jpg)
 
+![ACM verification](evidence/acm.jpg)
+
 ### 3. API Layer
 Browser network console verification confirms expected responses across both routes:
 * `GET /api/media` returns a well-formed JSON array of media objects with a `200 OK` status.
@@ -97,6 +99,8 @@ Browser network console verification confirms expected responses across both rou
 ![API GET Request Verification](evidence/api_get.jpg)
 
 * `POST /api/upload` returns a valid presigned S3 URL with a `200 OK` status.
+
+![API POST Request Verification](evidence/post.jpg)
 
 ### 4. Direct S3 Upload
 The browser executes a `PUT` request directly to the native S3 endpoint using the presigned URL. S3 validates the signature and verifies the request origin against the bucket CORS policy, completing the upload with a `200 OK`. Uploaded objects are confirmed present in the target media buckets via the S3 console.
