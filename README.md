@@ -2,6 +2,8 @@
 
 A serverless media management application deployed on AWS via Infrastructure as Code. Users can browse and upload JPG and PDF assets through a secure web interface, with all storage, compute, and networking provisioned through AWS CDK and deployed automatically via a GitHub Actions CI/CD pipeline.
 
+The application is live at https://krish.cc. Note: the environment will be decommissioned after a short period as this is a portfolio demonstration.
+
 ---
 
 ## System Architecture
