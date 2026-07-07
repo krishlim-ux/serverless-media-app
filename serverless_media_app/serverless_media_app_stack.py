@@ -36,7 +36,7 @@ class ServerlessMediaAppStack(Stack):
             cors=[s3.CorsRule(
                 allowed_origins=["https://krish.cc"],
                 allowed_methods=[s3.HttpMethods.PUT],
-                allowed_headers=["*"]
+                allowed_headers=["Content-Type"]
             )]
         )
 
@@ -48,7 +48,7 @@ class ServerlessMediaAppStack(Stack):
             cors=[s3.CorsRule(
                 allowed_origins=["https://krish.cc"],
                 allowed_methods=[s3.HttpMethods.PUT],
-                allowed_headers=["*"]
+                allowed_headers=["Content-Type"]
             )]
         )
 
@@ -102,7 +102,7 @@ class ServerlessMediaAppStack(Stack):
             }
         )
 
-        # 5. Create a high-performance HTTP API Gateway
+        # 5. Create a HTTP API Gateway
         self.http_api = apigwv2.HttpApi(
             self, "MediaAppHttpApi",
             api_name="MediaAppHttpApi"
